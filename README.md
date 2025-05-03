@@ -4,7 +4,7 @@ A modern command-line tool to help you stay hydrated by sending regular water dr
 
 ## Features
 
-- Customizable reminder intervals
+- Customizable reminder intervals with your name 
 - System tray notifications
 - Configurable reminder messages
 - Easy to use CLI interface
@@ -15,22 +15,25 @@ A modern command-line tool to help you stay hydrated by sending regular water dr
 1. Clone this repository:
 ```bash
 git clone https://github.com/yourusername/water-reminder-cli.git
-cd water-reminder-cli
+
 ```
 
 2. Install the package:
 ```bash
 pip install -e .
 ```
-
-## Usage
-
-### Basic Usage
-
-Start the water reminder with default settings (30-minute intervals):
+3. Navigate to the directory 
 ```bash
-water-reminder
+cd water-reminder
 ```
+## Usage
+4. How to run this ?
+```bash
+python cli.py start --interval 1 --name "Anurag"
+```
+#### 
+You can set any time interval you like — for example, 1 for 1 minute or decimals like 0.1 for 6 seconds. You can also personalize it with your name, like I’ve done with “Anurag”
+
 
 ### Customize Reminder Interval
 
@@ -39,12 +42,6 @@ Set a custom reminder interval (in minutes):
 water-reminder --interval 45
 ```
 
-### Stop the Reminder
-
-To stop the reminder service:
-```bash
-water-reminder --stop
-```
 
 ### Help
 
@@ -53,12 +50,6 @@ View all available commands and options:
 water-reminder --help
 ```
 
-## Configuration
-
-The tool uses a configuration file located at `~/.water-reminder/config.json`. You can customize:
-- Reminder interval
-- Custom reminder messages
-- Notification settings
 
 ## Development
 

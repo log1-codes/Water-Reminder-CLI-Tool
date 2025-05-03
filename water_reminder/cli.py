@@ -10,6 +10,7 @@ import logging
 import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
+import sys  # Add sys for better exception handling
 
 # Logging setup
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -35,36 +36,47 @@ class WaterReminder:
         self.lock = threading.Lock()
 
     def _load_config(self):
-        if not self.config_dir.exists():
-            self.config_dir.mkdir(parents=True)
-        if self.config_file.exists():
-            with open(self.config_file, 'r') as f:
-                return json.load(f)
-        return {}
+        try:
+            if not self.config_dir.exists():
+                self.config_dir.mkdir(parents=True)
+            if self.config_file.exists():
+                with open(self.config_file, 'r') as f:
+                    return json.load(f)
+            return {}
+        except Exception as e:
+            logger.error(f"Error loading config: {str(e)}")
+            return {}
 
     def _save_config(self):
-        config = {
-            'interval': self.interval,
-            'name': self.name
-        }
-        with open(self.config_file, 'w') as f:
-            json.dump(config, f, indent=4)
+        try:
+            config = {
+                'interval': self.interval,
+                'name': self.name
+            }
+            with open(self.config_file, 'w') as f:
+                json.dump(config, f, indent=4)
+        except Exception as e:
+            logger.error(f"Error saving config: {str(e)}")
 
     def create_tray_icon(self):
-        size = 128
-        image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(image)
-        drop_color = (0, 120, 255, 255)
-        ripple_color = (0, 120, 255, 100)
+        try:
+            size = 128
+            image = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(image)
+            drop_color = (0, 120, 255, 255)
+            ripple_color = (0, 120, 255, 100)
 
-        draw.ellipse([(size//4, size//4), (3*size//4, 3*size//4)], fill=drop_color)
-        draw.polygon([(size//2, 3*size//4), (size//4, 3*size//4), (size//2, 7*size//8)], fill=drop_color)
+            draw.ellipse([(size//4, size//4), (3*size//4, 3*size//4)], fill=drop_color)
+            draw.polygon([(size//2, 3*size//4), (size//4, 3*size//4), (size//2, 7*size//8)], fill=drop_color)
 
-        ripple_size = size//4
-        draw.ellipse([(size//2-ripple_size, size//2-ripple_size),
-                      (size//2+ripple_size, size//2+ripple_size)],
-                     outline=ripple_color, width=3)
-        return image
+            ripple_size = size//4
+            draw.ellipse([(size//2-ripple_size, size//2-ripple_size),
+                          (size//2+ripple_size, size//2+ripple_size)],
+                         outline=ripple_color, width=3)
+            return image
+        except Exception as e:
+            logger.error(f"Error creating tray icon: {str(e)}")
+            return None
 
     def show_notification(self):
         try:
@@ -73,8 +85,11 @@ class WaterReminder:
                 self.last_notification = current_time
 
                 if self.icon:
-                    self.icon.notify(f"💧 Hey {self.name}, time to drink water! 💧", "Water Reminder")
-                    logger.info(f"Notification sent at {current_time}")
+                    try:
+                        self.icon.notify(f"💧 Hey {self.name}, time to drink water! 💧", "Water Reminder")
+                        logger.info(f"Notification sent at {current_time}")
+                    except Exception as e:
+                        logger.error(f"Error sending tray notification: {str(e)}")
 
                 def create_window():
                     try:
@@ -107,7 +122,7 @@ class WaterReminder:
                         self.notification_window.lift()
                         self.notification_window.grab_set()
                     except Exception as e:
-                        logger.error(f"Error creating window: {str(e)}")
+                        logger.error(f"Error creating notification window: {str(e)}")
 
                 if self.root:
                     self.root.after(0, create_window)
@@ -142,6 +157,9 @@ class WaterReminder:
                 if self.running:
                     logger.info("Triggering next reminder...")
                     self.show_notification()
+        except KeyboardInterrupt:
+            logger.warning("KeyboardInterrupt detected. Stopping reminder.")
+            self.stop()
         except Exception as e:
             logger.error(f"Error in schedule loop: {str(e)}")
             self.stop()
@@ -155,9 +173,13 @@ class WaterReminder:
             self.running = True
 
             def start_tk_loop():
-                self.root = tk.Tk()
-                self.root.withdraw()
-                self.root.mainloop()
+                try:
+                    self.root = tk.Tk()
+                    self.root.withdraw()
+                    self.root.mainloop()
+                except Exception as e:
+                    logger.error(f"Error in Tkinter loop: {str(e)}")
+                    self.stop()
 
             tk_thread = threading.Thread(target=start_tk_loop, daemon=True)
             tk_thread.start()
@@ -171,6 +193,9 @@ class WaterReminder:
                 raise RuntimeError("Failed to initialize Tkinter root window.")
 
             image = self.create_tray_icon()
+            if not image:
+                raise RuntimeError("Failed to create tray icon.")
+
             menu = Menu(
                 MenuItem('Stop', lambda: self.stop()),
                 MenuItem('Exit', lambda: self.exit())
@@ -195,8 +220,8 @@ class WaterReminder:
             if self.root:
                 try:
                     self.root.quit()
-                except:
-                    pass
+                except Exception as e:
+                    logger.error(f"Error quitting Tkinter root: {str(e)}")
             logger.info("Reminder stopped.")
         except Exception as e:
             logger.error(f"Error stopping reminder: {str(e)}")
@@ -208,6 +233,15 @@ class WaterReminder:
         except Exception as e:
             logger.error(f"Error exiting: {str(e)}")
             os._exit(1)
+
+# Add a global exception handler for unhandled exceptions
+def handle_unhandled_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    logger.error("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+sys.excepthook = handle_unhandled_exception
 
 @click.group()
 def cli():

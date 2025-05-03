@@ -14,8 +14,7 @@ A modern command-line tool to help you stay hydrated by sending regular water dr
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/yourusername/water-reminder-cli.git
-
+git clone https://github.com/log1-codes/Water-Reminder-CLI-Tool.git
 ```
 
 2. Install the package:

@@ -11,6 +11,7 @@ import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
 import sys  # Add sys for better exception handling
+import signal  # Add signal handling for graceful shutdown
 
 # Logging setup
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -177,6 +178,9 @@ class WaterReminder:
                     self.root = tk.Tk()
                     self.root.withdraw()
                     self.root.mainloop()
+                except KeyboardInterrupt:
+                    logger.warning("KeyboardInterrupt detected in Tkinter loop.")
+                    self.stop()
                 except Exception as e:
                     logger.error(f"Error in Tkinter loop: {str(e)}")
                     self.stop()
@@ -205,7 +209,17 @@ class WaterReminder:
             scheduler_thread = threading.Thread(target=self.run_schedule, daemon=True)
             scheduler_thread.start()
 
+            # Handle KeyboardInterrupt gracefully for pystray
+            def signal_handler(sig, frame):
+                logger.warning("KeyboardInterrupt detected. Stopping reminder.")
+                self.stop()
+
+            signal.signal(signal.SIGINT, signal_handler)
+
             self.icon.run()
+        except KeyboardInterrupt:
+            logger.warning("KeyboardInterrupt detected in start method.")
+            self.stop()
         except Exception as e:
             logger.error(f"Error starting reminder: {str(e)}")
             self.stop()
@@ -214,7 +228,10 @@ class WaterReminder:
         try:
             self.running = False
             if self.icon:
-                self.icon.stop()
+                try:
+                    self.icon.stop()
+                except Exception as e:
+                    logger.error(f"Error stopping tray icon: {str(e)}")
             if self.notification_window:
                 self.close_notification()
             if self.root:
@@ -234,9 +251,27 @@ class WaterReminder:
             logger.error(f"Error exiting: {str(e)}")
             os._exit(1)
 
+# Suppress ctypes callback errors caused by pystray
+import ctypes
+import threading
+
+def suppress_ctypes_callback_errors():
+    original_excepthook = threading.excepthook
+
+    def custom_excepthook(args):
+        if isinstance(args.exc_value, KeyboardInterrupt):
+            logger.warning("KeyboardInterrupt detected in ctypes callback.")
+        else:
+            original_excepthook(args)
+
+    threading.excepthook = custom_excepthook
+
+suppress_ctypes_callback_errors()
+
 # Add a global exception handler for unhandled exceptions
 def handle_unhandled_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
+        logger.warning("Unhandled KeyboardInterrupt detected.")
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
     logger.error("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))

@@ -29,7 +29,7 @@ cd water-reminder
 ## Usage
 4. How to run this ?
 ```bash
-python cli.py start --interval 1 --name "Anurag"
+python cli.py start 
 ```
 #### 
 You can set any time interval you like — for example, 1 for 1 minute or decimals like 0.1 for 6 seconds. You can also personalize it with your name, like I’ve done with “Anurag”
@@ -39,7 +39,14 @@ You can set any time interval you like — for example, 1 for 1 minute or decima
 
 Set a custom reminder interval (in minutes):
 ```bash
-water-reminder --interval 45
+python cli.py start --interval 1 
+```
+
+### Customize Reminder Name
+
+Set a custom reminder interval (in minutes):
+```bash
+python cli.py start --name "your name" 
 ```
 
 
